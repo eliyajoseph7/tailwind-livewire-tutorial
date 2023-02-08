@@ -4,18 +4,29 @@ namespace App\Http\Livewire;
 
 use App\Models\Comment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
+use Livewire\WithFileUploads;
+use Livewire\WithPagination;
+use Intervention\Image\ImageManagerStatic as Image;
 
 class Comments extends Component
 {
+    use WithFileUploads;
+    use WithPagination;
+
     public $commentId = '';
     public $method = 'addComment';
     public $action = 'Add';
     public $comment;
     public $search = '';
-    public $comments = [];
+    // public $comments;
+    public $image;
 
-    protected $listeners = ['search' => 'render'];
+    protected $listeners = [
+        'search' => 'render',
+        'uploadImage' => 'handleImageUpload',
+    ];
 
     protected $rules = [
         'comment' => 'required|min:5'
@@ -23,28 +34,48 @@ class Comments extends Component
     
     public function render()
     {
-        $this->getComments();
-        return view('livewire.comments');
+        // $this->getComments();
+        $comments = Comment::latest()->paginate(2);
+        return view('livewire.comments', compact('comments'));
     }
 
     public function getComments() {
-        $comments = Comment::latest()->get();
+        $comments = Comment::latest()->paginate(2);
 
-        $this->comments = $comments;
+        // $this->comments = $comments;
+    }
+
+    public function handleImageUpload($imageData) {
+        $this->image = $imageData;
     }
 
     public function addComment($formData) {
        $this->validate();
         // dd($formData['comment']);
+        $image = $this->storeImage();
         $data = new Comment;
         $data->comment = $this->comment;
+        $data->image = $image;
 
         $data->save();
 
         session()->flash('feedback', 'Comment successfully added.');
-        $this->reset('comment');
+        $this->reset('comment', 'image');
         $this->render();
 
+    }
+
+    public function storeImage() {
+        if(!$this->image) return null;
+        $img = Image::make($this->image)->encode('jpg');
+        $name = time().'.jpg';
+        Storage::disk('public')->put($name, $img);
+        // $this->getImagePathAttribute($name);
+        return $name;
+    }
+
+    public function getImagePathAttribute($image) {
+        return Storage::disk('public')->url($image);
     }
 
 
@@ -78,7 +109,10 @@ class Comments extends Component
     }
 
     public function deleteComment($id) {
-        Comment::find($id)->delete();
+        $comment = Comment::find($id);
+        Storage::disk('public')->delete($comment->image);
+
+        $comment->delete();
 
         session()->flash('feedback', 'Comment successfully deleted.');
         $this->render();

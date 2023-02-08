@@ -36,6 +36,13 @@
             </div>
 
             @enderror
+            <section class="mb-2">
+                @if ($image)
+                <img src="{{ $image }}" alt="" class="w-42 h-36 img-thumbnail img-fluid border rounded-md hover:shadow-md cursor-pointer">
+                    
+                @endif
+                <input type="file" wire:change="$emit('imageSelected')" id="image">
+            </section>
             <div class="flex">
 
                 <form wire:submit.prevent="{{$method}}(Object.fromEntries(new FormData($event.target)))" class="flex min-w-0 w-full">
@@ -50,13 +57,16 @@
                 <div class="block p-6 md:w-full bg-white rounded-lg border border-gray-200 shadow-md hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700">
                     <div class="flex-row md:flex-column">
                         <h5 class="w-5/6 mb-2 text-2xl font-normal tracking-tight text-gray-900 dark:text-white">{{ $cmt->comment }}</h6>
-                            <div class="mr-1 w-1/6 space-x-5">
+                            <div class="mr-1 w-1/6 space-x-5 float-right">
                                 <div class="flex space-x-3 md:mt-1">
                                     <a href="#" class="inline-flex items-center py-2 px-4 text-sm font-medium text-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800" wire:click="editComment({{$cmt->id}})">Edit</a>
                                     <a href="#" class="inline-flex items-center py-2 px-4 text-sm font-medium text-center text-white bg-red-700 rounded-lg border border-red-300 hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-200 dark:bg-red-800 dark:text-white dark:border-red-600 dark:hover:bg-red-700 dark:hover:border-red-700 dark:focus:ring-red-700" wire:click="deleteComment({{$cmt->id}})">Delete</a>
                                 </div>
 
                             </div>
+                            @if ($cmt->image)
+                                <img src="/storage/{{ $cmt->image }}" alt="" class="w-48 h-42 img-fluid py-1">
+                            @endif
                     </div>
                     <p>{{ $cmt->created_at->diffForHumans() }}</p>
                 </div>
@@ -66,9 +76,25 @@
                 <p style="text-align: center;">No Comments yet!</p>
             </div>
             @endforelse
+            <div class="py-3">
+                {{ $comments->links() }}
 
+            </div>
             <!-- {{ $comment }} -->
         </div>
     </div>
 
 </div>
+<script>
+    window.livewire.on('imageSelected', () => {
+        let fileInput = document.getElementById('image')
+        let file = fileInput.files[0]
+        
+        let reader = new FileReader();
+
+        reader.onloadend = () => {
+            window.livewire.emit('uploadImage', reader.result)
+        }
+        reader.readAsDataURL(file)
+    })
+</script>
